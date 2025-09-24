@@ -1,71 +1,73 @@
-# Getting Started with Create React App
+# Dockerización y CI de la aplicación React
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-hi
+Este repositorio contiene una aplicación React (Create React App) dockerizada y un flujo de CI para construir y publicar la imagen en Docker Hub mediante GitHub Actions.
 
-## Available Scripts
+## 1. Qué se hizo
 
-In the project directory, you can run:
+- Dockerfile con build:
+	- Etapa de build con `node:18-alpine` que ejecuta `npm ci` y `npm run build`.
+	- Etapa final con `nginx:alpine` que sirve la app estática.
+- Archivo `nginx.conf` con configuración para SPA (redirige rutas al `index.html`).
+- `.dockerignore` para reducir el contexto de build.
+- Workflow de GitHub Actions (`.github/workflows/docker-publish.yml`) que:
+	- Checkout del repo.
+	- Configura Docker Buildx.
+	- Hace login en Docker Hub usando secretos (`DOCKER_USERNAME`, `DOCKER_PASSWORD`).
+	- Construye y publica la imagen con la etiqueta `${{ secrets.DOCKER_USERNAME }}/docker-test:latest`.
 
-### `npm start`
+## 2. Requisitos
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Docker Desktop instalado (para ejecutar local).
+- Cuenta en Docker Hub para publicar la imagen
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 3. Ejecutar localmente (sin GitHub Actions)
 
-### `npm test`
+Desde PowerShell en la raíz del proyecto:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```powershell
+# Construir la imagen
+docker build -t docker-test:local .
 
-### `npm run build`
+# Ejecutar el contenedor
+docker run -d -p 3000:80 --name docker-test-local docker-test:local
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+# Verificar que está corriendo
+docker ps --filter name=docker-test-local --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Abrir en el navegador
+# http://localhost:3000
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+# Para detener y limpiar (opcional)
+docker stop docker-test-local
+docker rm docker-test-local
+```
 
-### `npm run eject`
+## 4. Publicar con GitHub Actions
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1) Configurar secretos en el repositorio: Settings → Secrets and variables → Actions → New repository secret
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- `DOCKER_USERNAME`: tu usuario de Docker Hub.
+- `DOCKER_PASSWORD`: token (o contraseña) de Docker Hub con permisos de escritura.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+2) Lanzar el flujo:
 
-## Learn More
+- Haciendo push a la rama `main`, o
+- Manualmente desde la pestaña “Actions” con el workflow “Build and Push Docker Image”.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+La imagen se publicará en Docker Hub con la etiqueta configurada (por defecto `${DOCKER_USERNAME}/docker-test:latest`).
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 5. Archivos relevantes
 
-### Code Splitting
+- `Dockerfile`: build de la app y runtime con Nginx.
+- `nginx.conf`: configuración SPA para Nginx.
+- `.dockerignore`: excluye archivos y carpetas no necesarios en el build de Docker.
+- `.github/workflows/docker-publish.yml`: workflow de CI para construir y publicar la imagen.
+- `.gitignore`: ignora dependencias, builds, logs, etc.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 6. Evidencia de funcionamiento (coloca aquí tu imagen)
 
-### Analyzing the Bundle Size
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+![Funcionamiento del Dockerfile](docs/funcionamiento.png)
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+> Ejemplo: `docker run -p 3000:80 <tu-imagen>` y luego abrir `http://localhost:3000`.

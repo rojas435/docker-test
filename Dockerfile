@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # 1) Build stage: compile the React app
 FROM node:18-alpine AS build
 
